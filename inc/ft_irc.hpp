@@ -14,11 +14,33 @@
 # include <sstream>
 # include <fcntl.h>
 
+typedef	enum s_cmpnt_type {
+	PREFIX,
+	CMD,
+	PARAMS,
+	MIDDLE,
+	TRAILING
+} t_cmpnt_type;
+
+typedef struct s_msg_cmpnts {
+	std::string _data;
+	t_cmpnt_type	_type;
+} t_msg_cmpnts;
+
 class	Client {
 	public:
 		int	_fd;
 		Client(int fd);
 		std::string	buf;
+		std::vector<t_msg_cmpnts> cmpnts;
+		bool	get_msg();
+		void	set_cmpnts(std::string& msg);
+		bool	tokenizer();
+		// bool	is_middle();
+		// bool	is_trailing();
+		//  validate client msg by
+		// 1- tokenize(string, component_struct) {
+		// :prefix (optional) + command + params}
 };
 
 class   Server {
@@ -41,6 +63,8 @@ class   Server {
 		bool	accept_cl();
 		bool	handle_clients();
 		bool	recv_msgs();
+
+
 };
 
 #endif

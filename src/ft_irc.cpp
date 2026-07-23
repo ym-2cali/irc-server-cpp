@@ -70,14 +70,14 @@ bool	Server::recv_msgs(){
 		{
 			errno = 0;
 			char	buf[513];
-			ssize_t	n = 0;
-			while ((n = recv(this->_fds[i].fd, &buf, sizeof(buf) - 1, 0)) > 0)
+			ssize_t	n = recv(this->_fds[i].fd, &buf, sizeof(buf) - 1, 0);
+			if (n > 0)
 			{
 				buf[n] = '\0';
-				std::string	s(buf, n);
-				std::cout << s;
+				this->clients[i].buf.append(buf, n);
+				this->clients[i].get_msg();
 			}
-			if (n < 0)
+			else if (n < 0)
 			{
 				if (errno == EAGAIN || errno == EWOULDBLOCK)
 					return false ;
@@ -85,9 +85,10 @@ bool	Server::recv_msgs(){
 				ss << "Failed receiving from client " << (i + 1);	
 				throw std::runtime_error(ss.str());
 			}
-			else if (!n){
+			else {
 				close(this->_fds[i].fd);
 				this->_fds.erase(this->_fds.begin() + i);
+				this->clients.erase(this->clients.begin() + i);
 				std::cout << "Client " << i + 1 << " disconnected\n";
 			}
 		}
@@ -101,7 +102,6 @@ bool	Server::handle_clients(){
 		try {
 			if (!this->recv_msgs())
 				return false;
-			
 		}
 		catch (const std::exception& e){
 			std::cerr << e.what() << std::endl;
@@ -115,7 +115,7 @@ bool	Server::handle_clients(){
 void	Server::Server_ON(){
 	while (true)
 	{
-		std::cout << "<----------LISTENING---------->\n";
+		std::cout << "<----------<>LISTENING</>---------->\n";
 		while (this->accept_cl())
 			std::cout << "<------Client " << this->_fds.size() << " Connected------>\n";
 		if (this->_fds.empty())
