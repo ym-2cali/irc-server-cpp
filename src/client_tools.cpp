@@ -5,6 +5,7 @@ Client::Client(int fd):_fd(fd){
 	this->nickname = "";
 	this->username = "";
 	this->password = "";
+	this->out_buf = "";
 }
 
 
@@ -87,5 +88,3 @@ bool	Client::get_msg(){
 	this->set_cmpnts(msg);
 	return true;
 }
-
-

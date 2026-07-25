@@ -66,10 +66,11 @@ class   Server {
 		void	SetInData();
 		bool	accept_cl();
 		bool	handle_clients();
-		bool	recv_msgs();
 		void	handle_commands();
 		void	cl_registration(Client& client, std::string& cmd);
 		bool	nickname_coll(std::string& nick);
+		void	recv_msgs();
+		bool	send_msg(Client& client);
 
 };
 

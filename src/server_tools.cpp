@@ -3,7 +3,7 @@
 bool	Server::nickname_coll(std::string& nick){
 	std::vector<Client>::iterator it = this->clients.begin();
 	while (it != this->clients.end()){
-		if (it->nickname == nick)
+		if (!it->nickname.empty() && it->nickname == nick)
 			return false;
 		it++;
 	}
@@ -11,7 +11,7 @@ bool	Server::nickname_coll(std::string& nick){
 }
 
 bool	registration_commands(std::string& cmd, std::size_t size){
-	if (size > 3)
+	if (size > 4)
 		return false;
 	return (cmd == "PASS" || cmd == "NICK" || cmd == "USER" );
 }
@@ -20,40 +20,45 @@ void	Server::cl_registration(Client& client, std::string& cmd)
 {
 	if (cmd == "PASS"){
 		if (client.password.size())
-			throw	std::runtime_error("ERR_ALREADYREGISTRED");
+			client.out_buf =  "ERR_ALREADYREGISTRED\r\n";
 		else if (client.cmpnts.size() < 2)
-			throw	std::runtime_error(" ERR_NEEDMOREPARAMS");
+			client.out_buf = "ERR_NEEDMOREPARAMS\r\n";
 		else if (client.nickname.empty() && client.username.empty())
-			throw	std::runtime_error("NICK/USER first");
+			client.out_buf = "NICK/USER first\r\n";
 		else if (client.cmpnts.begin()->_type != CMD || (client.cmpnts.begin() + 1)->_type != MIDDLE)
-			throw	std::runtime_error("ERR_INVALID_COMMAND");
-		client.password = cmd;
-		client.registred = true;
+			client.out_buf = "ERR_INVALID_COMMAND\r\n";
+		else
+			client.password = client.cmpnts.back()._data;
 	}
 	else if (cmd == "NICK")
 	{
 		if (client.cmpnts.size() < 2 || (client.cmpnts.begin()->_type == PREFIX && client.cmpnts.size() != 3)
-			|| client.cmpnts.end()->_type != MIDDLE)
-				throw	std::runtime_error("ERR_NONICKNAMEGIVEN");
-		bool	used = this->nickname_coll(client.nickname);
-		if (!used && !client.nickname.empty())
-			throw	std::runtime_error("ERR_NICKNAMEINUSE");
-		else if (!used && client.nickname.empty())
-			throw	std::runtime_error("ERR_NICKCOLLISION");
-		client.nickname = client.cmpnts.end()->_data;
+			|| client.cmpnts.back()._type != MIDDLE)
+				client.out_buf = "ERR_NONICKNAMEGIVEN\r\n" ;
+		else{
+			bool	used = this->nickname_coll(client.nickname);
+			if (!used && !client.nickname.empty())
+				client.out_buf = "ERR_NICKNAMEINUSE\r\n";
+			else if (!used && client.nickname.empty())
+				client.out_buf = "ERR_NICKCOLLISION\r\n";
+			client.nickname = client.cmpnts.back()._data;
+		}
 	}
 	else if (cmd == "USER")
 	{
 		if (client.cmpnts.size() != 2)
-			throw std::runtime_error("ERR_NEEDMOREPARAMS");
+			client.out_buf = "ERR_NEEDMOREPARAMS\r\n";
 		if (client.registred)
-			throw std::runtime_error("ERR_ALREADYREGISTRED");
-		if (client.cmpnts.begin()->_type != CMD || client.cmpnts.end()->_type != MIDDLE)	
-			throw std::runtime_error("ERR_INVALID_COMMAND");
-		client.username = client.cmpnts.end()->_data;
+			client.out_buf = "ERR_ALREADYREGISTRED\r\n";
+		if (client.cmpnts.begin()->_type != CMD || client.cmpnts.back()._type != MIDDLE)	
+			client.out_buf = "ERR_INVALID_COMMAND\r\n";
+		client.username = client.cmpnts.back()._data;
 	}
 	if (!client.nickname.empty() && !client.password.empty() && !client.username.empty() && !client.registred)
-			client.registred = true;
+	{
+		client.out_buf = "you are registred\r\n";
+		client.registred = true;
+	}
 }
 
 void	Server::handle_commands()
@@ -67,6 +72,18 @@ void	Server::handle_commands()
 				it++;
 			if (registration_commands(it->_data, it->_data.size()))
 				this->cl_registration(this->clients[i], it->_data);
+			if (!this->send_msg(this->clients[i]))
+				std::cerr << "send() error\n";
 		}
 	}
+}
+
+bool	Server::send_msg(Client& client){
+	if (!client.out_buf.empty()){
+		ssize_t n = send(client._fd, client.out_buf.c_str(), client.out_buf.size(), 0);
+		if (n == -1)
+			return false;
+	}
+	client.out_buf.clear();
+	return true;
 }

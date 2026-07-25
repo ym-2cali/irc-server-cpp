@@ -63,9 +63,11 @@ bool	Server::accept_cl(){
 	return true;
 }
 
-bool	Server::recv_msgs(){
+void	Server::recv_msgs(){
 	for (std::size_t i = 0; i < this->_fds.size(); i++)
 	{
+		if (!this->clients[i].out_buf.empty())
+			this->clients[i].out_buf.clear();
 		if (this->_fds[i].revents & POLLIN)
 		{
 			errno = 0;
@@ -75,18 +77,22 @@ bool	Server::recv_msgs(){
 			{
 				buf[n] = '\0';
 				this->clients[i].buf.append(buf, n);
-				this->clients[i].get_msg();
+				if (!this->clients[i].get_msg())
+				{
+					this->clients[i].out_buf = "too long a msg\r\n";
+					continue;
+				}
 			}
 			else if (n < 0)
 			{
 				if (errno == EAGAIN || errno == EWOULDBLOCK){
-					// send something  to the client
 					continue ;
 				}
 				std::stringstream ss;
 				ss << "Failed receiving from client " << (i + 1);
 				// send something  to the client
 				// throw std::runtime_error(ss.str());
+				this->clients[i].out_buf = "failed getting your message\r\n";
 			}
 			else {
 				close(this->_fds[i].fd);
@@ -96,16 +102,15 @@ bool	Server::recv_msgs(){
 			}
 		}
 	}
-	return true;
 }
 
 bool	Server::handle_clients(){
 	int	ready_fds = poll(&this->_fds[0], this->_fds.size(), 0);
-	if (ready_fds)
+	if (ready_fds > 0)
 	{
-		this->recv_msgs();
+		this->recv_msgs();// some messages must be sent
+
 		this->handle_commands();
-		// throw msgs send messages
 	}
 	else if (ready_fds < 0)
 		return false;
@@ -125,7 +130,7 @@ void	Server::Server_ON(){
 		}
 		if (!this->handle_clients())
 		{
-			// poll error
+			std::cerr << "poll() error\n";
 			continue ;
 		}
 		sleep(1);
