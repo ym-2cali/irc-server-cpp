@@ -79,11 +79,14 @@ bool	Server::recv_msgs(){
 			}
 			else if (n < 0)
 			{
-				if (errno == EAGAIN || errno == EWOULDBLOCK)
-					return false ;
+				if (errno == EAGAIN || errno == EWOULDBLOCK){
+					// send something  to the client
+					continue ;
+				}
 				std::stringstream ss;
-				ss << "Failed receiving from client " << (i + 1);	
-				throw std::runtime_error(ss.str());
+				ss << "Failed receiving from client " << (i + 1);
+				// send something  to the client
+				// throw std::runtime_error(ss.str());
 			}
 			else {
 				close(this->_fds[i].fd);
@@ -98,17 +101,14 @@ bool	Server::recv_msgs(){
 
 bool	Server::handle_clients(){
 	int	ready_fds = poll(&this->_fds[0], this->_fds.size(), 0);
-	if (ready_fds){
-		try {
-			if (!this->recv_msgs())
-				return false;
-		}
-		catch (const std::exception& e){
-			std::cerr << e.what() << std::endl;
-		}
+	if (ready_fds)
+	{
+		this->recv_msgs();
+		this->handle_commands();
+		// throw msgs send messages
 	}
 	else if (ready_fds < 0)
-		throw std::runtime_error("POLL_ERROR");
+		return false;
 	return true;
 }
 
@@ -124,7 +124,10 @@ void	Server::Server_ON(){
 			continue;
 		}
 		if (!this->handle_clients())
+		{
+			// poll error
 			continue ;
+		}
 		sleep(1);
 	}		
 }

@@ -30,17 +30,21 @@ typedef struct s_msg_cmpnts {
 class	Client {
 	public:
 		int	_fd;
+		std::string	nickname;
+		std::string	username;
+		bool	registred;
+		std::string	password;
+
 		Client(int fd);
+
 		std::string	buf;
+		std::string	out_buf;
 		std::vector<t_msg_cmpnts> cmpnts;
+
 		bool	get_msg();
 		void	set_cmpnts(std::string& msg);
 		bool	tokenizer();
-		// bool	is_middle();
-		// bool	is_trailing();
-		//  validate client msg by
-		// 1- tokenize(string, component_struct) {
-		// :prefix (optional) + command + params}
+
 };
 
 class   Server {
@@ -63,7 +67,9 @@ class   Server {
 		bool	accept_cl();
 		bool	handle_clients();
 		bool	recv_msgs();
-
+		void	handle_commands();
+		void	cl_registration(Client& client, std::string& cmd);
+		bool	nickname_coll(std::string& nick);
 
 };
 

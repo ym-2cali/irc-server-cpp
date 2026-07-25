@@ -1,6 +1,11 @@
 #include "../inc/ft_irc.hpp"
 
-Client::Client(int fd):_fd(fd){}
+Client::Client(int fd):_fd(fd){
+	this->registred = false;
+	this->nickname = "";
+	this->username = "";
+	this->password = "";
+}
 
 
 void	Client::set_cmpnts(std::string& msg){
@@ -82,3 +87,5 @@ bool	Client::get_msg(){
 	this->set_cmpnts(msg);
 	return true;
 }
+
+

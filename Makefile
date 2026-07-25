@@ -4,7 +4,7 @@ CLIENT_NAME= client_exec
 
 CLIENT_SRC= client/client_src/client.cpp \
 
-SERVER_SRC= src/server.cpp src/ft_irc.cpp src/client_tools.cpp #src/main.cpp
+SERVER_SRC= src/server.cpp src/ft_irc.cpp src/client_tools.cpp src/server_tools.cpp #src/main.cpp
 
 CLIENT_OBJ= $(CLIENT_SRC:.cpp=.o)
 
