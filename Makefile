@@ -1,42 +1,31 @@
-SERVER_NAME= server_exec
+NAME		= ircserv
 
-CLIENT_NAME= client_exec
+CXX			= c++
+CXXFLAGS	= -Wall -Wextra -Werror -std=c++98
 
-CLIENT_SRC= client/client_src/client.cpp \
+SRC_DIR		= src
+OBJ_DIR		= obj
+INC_DIR		= inc
 
-SERVER_SRC= src/server.cpp src/ft_irc.cpp src/client_tools.cpp src/server_tools.cpp #src/main.cpp
+SRC			= main.cpp Server.cpp Commands.cpp Client.cpp Channel.cpp Message.cpp Utils.cpp
+OBJ			= $(addprefix $(OBJ_DIR)/, $(SRC:.cpp=.o))
+HEADERS		= $(wildcard $(INC_DIR)/*.hpp)
 
-CLIENT_OBJ= $(CLIENT_SRC:.cpp=.o)
+all: $(NAME)
 
-SERVER_OBJ= $(SERVER_SRC:.cpp=.o)
+$(NAME): $(OBJ)
+	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
-GXX= c++
-
-FLAGS= -Wall -Wextra -Werror -std=c++98 #-fsanitize=address
-
-HEADER= inc/ft_irc.hpp
-
-all:$(SERVER_NAME) $(CLIENT_NAME)
-
-client:$(CLIENT_NAME)
-
-server:$(SERVER_NAME)
-
-$(CLIENT_NAME):$(CLIENT_OBJ)
-		$(GXX) $(FLAGS) $(CLIENT_OBJ) -o $(CLIENT_NAME)
-
-$(SERVER_NAME):$(SERVER_OBJ)
-		$(GXX) $(FLAGS) $(SERVER_OBJ) -o $(SERVER_NAME)
-
-%.o:%.cpp $(HEADER)
-		$(GXX) $(FLAGS) -c $< -o $@
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -I$(INC_DIR) -c $< -o $@
 
 clean:
-		rm -f $(SERVER_OBJ) $(CLIENT_OBJ) 
+	rm -rf $(OBJ_DIR)
 
-fclean:clean
-		rm -f server_exec client_exec
+fclean: clean
+	rm -f $(NAME)
 
-re:fclean all
+re: fclean all
 
-.PHONY: clean
+.PHONY: all clean fclean re

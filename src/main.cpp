@@ -1,69 +1,52 @@
-// #include "../inc/ft_irc.hpp"
+#include "Server.hpp"
+#include <iostream>
+#include <cstdlib>
+#include <stdexcept>
 
-// int main(){
-// 	int sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-// 	if (sockfd < 0)
-// 		return (std::cerr << "failing opening socket\n", 1);
-// 	int opt = 1;
-// 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-// 	// setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-// 	struct sockaddr_in addr;
-// 	std::memset(&addr, 0, sizeof(addr));
-// 	addr.sin_family = AF_INET;
-// 	addr.sin_port = htons(6667);
-// 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-// 	if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)))
-// 		return (std::cerr << "failing binding socket\n", 1);
-// 	if (listen(sockfd, SOMAXCONN))
-// 		return (std::cerr << "socket could not listen\n", 1);
-// 	int i = 0;
-// 	std::vector<struct pollfd>	fds;
-// 	while(true)
-// 	{
-// 		int	c_fd = accept(sockfd, NULL, NULL);
-// 		if (c_fd > 0)
-// 		{
-// 			std::cout << "<----------client " << ++i << " connected---------->\n";
-// 			struct pollfd __fd;
-// 			std::memset(&__fd, 0, sizeof(struct pollfd));
-// 			__fd.fd = c_fd;
-// 			__fd.events = POLLIN;
-// 			fds.push_back(__fd);
-// 		}
-// 		else
-// 		{
-// 			std::cout << "<----------LISTENING---------->\n";
-// 			int ready = poll(&fds[0], fds.size(), -1);
-// 			if (ready > 0)
-// 			{
-// 				std::vector<struct pollfd>::iterator it = fds.begin();
-// 				while (it != fds.end())
-// 				{
-// 					if (it->revents & POLLIN)
-// 					{
-// 						char buf[1024];
-// 					  	ssize_t n;
-// 						while ((n = recv(it->fd, buf, sizeof(buf) - 1, 0)) > 0) {
-// 					    	buf[n] = '\0';
-// 					      	std::string s(buf, n);
-// 					      	std::cout << s << std::endl;
-// 					  	}
-// 					}
-// 					it++;
-// 				}
-// 			}
-// 			else if (ready < 0)
-// 			{
-// 				std::cerr << "ERROR_poll()";
-// 				break ;
-// 			}
-// 			sleep(1);
-// 			continue ;
-// 		}
-		
-// 		// handle clients.
-// 		sleep(1);
-// 	}
-// 	close(sockfd);
-// 	return 0;
-// }
+volatile sig_atomic_t	g_running = 1;
+
+static void	handle_signal(int sig) {
+	(void)sig;
+	g_running = 0;
+}
+
+static int	parse_port(const std::string& s) {
+	if (s.empty() || s.size() > 5)
+		return -1;
+	for (std::size_t i = 0; i < s.size(); i++)
+		if (!std::isdigit(static_cast<unsigned char>(s[i])))
+			return -1;
+	int	port = std::atoi(s.c_str());
+	return (port >= 1 && port <= 65535) ? port : -1;
+}
+
+int	main(int argc, char** argv) {
+	if (argc != 3) {
+		std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
+		return 1;
+	}
+	int			port = parse_port(argv[1]);
+	std::string	password = argv[2];
+	if (port < 0) {
+		std::cerr << "Error: invalid port '" << argv[1] << "'" << std::endl;
+		return 1;
+	}
+	if (password.empty() || password.find_first_of(" \r\n") != std::string::npos) {
+		std::cerr << "Error: password must be non-empty and contain no spaces" << std::endl;
+		return 1;
+	}
+	signal(SIGINT, handle_signal);
+	signal(SIGTERM, handle_signal);
+	signal(SIGQUIT, handle_signal);
+	signal(SIGPIPE, SIG_IGN);
+	try {
+		Server	server(port, password);
+		server.run();
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 1;
+	}
+	std::cout << "\nServer stopped." << std::endl;
+	return 0;
+}

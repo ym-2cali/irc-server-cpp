@@ -1,0 +1,4 @@
+obj/
+ircserv
+*.o
+__pycache__/
